@@ -17,10 +17,7 @@ class TextEncoder(ABC):
 
     def __init__(self, language="english", encoding_length=50):
         self.language = language
-        self.encoding_length = encoding_length
-        self.stop_words = set(stopwords.words(language))
-        self.lemmatizer = WordNetLemmatizer() if language == "english" else None
-        self.stemmer = SnowballStemmer(language)
+
         try:
             nltk.data.find("corpora/wordnet")
         except LookupError:
@@ -29,6 +26,16 @@ class TextEncoder(ABC):
             nltk.data.find("tokenizers/punkt")
         except LookupError:
             nltk.download("punkt")
+        try:
+            nltk.data.find("corpora/stopwords")
+        except LookupError:
+            nltk.download("stopwords")
+
+        self.encoding_length = encoding_length
+        self.stop_words = set(stopwords.words(language))
+        self.lemmatizer = WordNetLemmatizer() if language == "english" else None
+        self.stemmer = SnowballStemmer(language)
+
         super().__init__()
 
     def preprocess_docs(self, docs, as_list=True):

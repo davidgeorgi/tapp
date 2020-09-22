@@ -5,9 +5,9 @@ from datetime import datetime
 import os
 from tensorflow.keras import metrics
 from tensorflow.keras import layers
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.losses import mean_absolute_error
-from prediction_model import PredictionModel
+from .prediction_model import PredictionModel
 
 
 class TappModel(PredictionModel):
@@ -88,8 +88,6 @@ class TappModel(PredictionModel):
         reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=5, min_lr=0.0001)
         # Stop early if metrics do not improve for longer time
         early_stopping = EarlyStopping(monitor="val_loss", patience=10)
-        # Save model
-        #model_checkpoint = ModelCheckpoint("../models/model_{epoch:02d}-{val_loss:.2f}.h5", monitor="val_loss", verbose=0, save_best_only=True, save_weights_only=False, mode="auto")
         # Fit the model to data
         return self.model.fit(x, {"next_activity_output": y_next_act, "final_activity_output": y_final_act, "next_timestamp_output": y_next_time, "final_timestamp_output": y_final_time}, epochs=epochs, batch_size=None, validation_split=validation_split, callbacks=[reduce_lr, early_stopping])
 
@@ -153,7 +151,7 @@ class TappModel(PredictionModel):
         columns = ["caseID", "prefix-length", "true-next-activity", "pred-next-activity", "true-next-time", "pred-next-time", "true-outcome", "pred-outcome", "true-cycle-time", "pred-cylce-time"]
         return pd.DataFrame(column_data, columns=columns)
 
-    def evaluate(self, log, num_prefixes=8):
+    def evaluate(self, log, path, num_prefixes=8):
         # Generate raw predictions
         raw = self._evaluate_raw(log)
         # Compute metrics
@@ -168,8 +166,6 @@ class TappModel(PredictionModel):
         cycle_time_mae_pre = [mean_absolute_error(raw[raw["prefix-length"] == prefix_length]["true-cycle-time"].astype(float).to_numpy(), raw[raw["prefix-length"] == prefix_length]["pred-cylce-time"].astype(float).to_numpy()).numpy() for prefix_length in range(1, num_prefixes + 1)]
 
         prefix_predictions = next_activity_acc_pre + next_time_mae_pre + outcome_acc_pre + cycle_time_mae_pre
-
-        path = os.path.join("..", "results", "results.csv")
 
         if not os.path.exists(path):
             prefix_columns = []

@@ -33,6 +33,8 @@ class TextEncoder(ABC):
 
         self.encoding_length = encoding_length
         self.stop_words = set(stopwords.words(language))
+        self.stop_words.remove("not")
+        self.stop_words.remove("no")
         self.lemmatizer = WordNetLemmatizer() if language == "english" else None
         self.stemmer = SnowballStemmer(language)
 

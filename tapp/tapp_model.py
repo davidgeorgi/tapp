@@ -72,7 +72,7 @@ class TappModel(PredictionModel):
         model.compile(loss=loss_param, metrics=metric_param, optimizer=optimizer_param)
         self.model = model
 
-    def fit(self, log, data_attributes=None, text_attribute=None, epochs=100, validation_split=0.2):
+    def fit(self, log, data_attributes=None, text_attribute=None, epochs=100, validation_split=0.2, patience_rl=5, patience_es=10, batch_size=None):
 
         # Encode training data
         self.activities = _get_event_labels(log, "concept:name")
@@ -85,11 +85,11 @@ class TappModel(PredictionModel):
         self._build_model()
 
         # Reduce learning rate if metrics do not improve anymore
-        reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=5, min_lr=0.0001)
+        reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=patience_rl, min_lr=0.0001)
         # Stop early if metrics do not improve for longer time
-        early_stopping = EarlyStopping(monitor="val_loss", patience=10)
+        early_stopping = EarlyStopping(monitor="val_loss", patience=patience_es)
         # Fit the model to data
-        return self.model.fit(x, {"next_activity_output": y_next_act, "final_activity_output": y_final_act, "next_timestamp_output": y_next_time, "final_timestamp_output": y_final_time}, epochs=epochs, batch_size=None, validation_split=validation_split, callbacks=[reduce_lr, early_stopping])
+        return self.model.fit(x, {"next_activity_output": y_next_act, "final_activity_output": y_final_act, "next_timestamp_output": y_next_time, "final_timestamp_output": y_final_time}, epochs=epochs, batch_size=batch_size, validation_split=validation_split, callbacks=[reduce_lr, early_stopping])
 
     def predict_next_activity(self, log):
         x = self.log_encoder.transform(log, for_training=False)
@@ -155,10 +155,10 @@ class TappModel(PredictionModel):
         # Generate raw predictions
         raw = self._evaluate_raw(log)
         # Compute metrics
-        next_activity_acc = len(raw[(raw["pred-next-activity"] == raw["true-next-activity"]) & (raw["prefix-length"] > 1)]) / np.max([len(raw[raw["prefix-length"] > 1]), 1])
-        next_time_mae = mean_absolute_error(raw[raw["prefix-length"] > 1]["true-next-time"].astype(float).to_numpy(), raw[raw["prefix-length"] > 1]["pred-next-time"].astype(float).to_numpy()).numpy()
-        outcome_acc = len(raw[(raw["pred-outcome"] == raw["true-outcome"]) & (raw["prefix-length"] > 1)]) / np.max([len(raw[raw["prefix-length"] > 1]), 1])
-        cycle_time_mae = mean_absolute_error(raw[raw["prefix-length"] > 1]["true-cycle-time"].astype(float).to_numpy(), raw[raw["prefix-length"] > 1]["pred-cylce-time"].astype(float).to_numpy()).numpy()
+        next_activity_acc = len(raw[(raw["pred-next-activity"] == raw["true-next-activity"]) & (raw["prefix-length"] >= 1)]) / np.max([len(raw[raw["prefix-length"] >= 1]), 1])
+        next_time_mae = mean_absolute_error(raw[raw["prefix-length"] >= 1]["true-next-time"].astype(float).to_numpy(), raw[raw["prefix-length"] >= 1]["pred-next-time"].astype(float).to_numpy()).numpy()
+        outcome_acc = len(raw[(raw["pred-outcome"] == raw["true-outcome"]) & (raw["prefix-length"] >= 1)]) / np.max([len(raw[raw["prefix-length"] >= 1]), 1])
+        cycle_time_mae = mean_absolute_error(raw[raw["prefix-length"] >= 1]["true-cycle-time"].astype(float).to_numpy(), raw[raw["prefix-length"] >= 1]["pred-cylce-time"].astype(float).to_numpy()).numpy()
 
         next_activity_acc_pre = [len(raw[(raw["pred-next-activity"] == raw["true-next-activity"]) & (raw["prefix-length"] == prefix_length)]) / np.max([len(raw[raw["prefix-length"] == prefix_length]), 1]) for prefix_length in range(1, num_prefixes + 1)]
         next_time_mae_pre = [mean_absolute_error(raw[raw["prefix-length"] == prefix_length]["true-next-time"].astype(float).to_numpy(), raw[raw["prefix-length"] == prefix_length]["pred-next-time"].astype(float).to_numpy()).numpy() for prefix_length in range(1, num_prefixes + 1)]

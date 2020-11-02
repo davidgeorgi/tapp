@@ -31,9 +31,5 @@ class PredictionModel(ABC):
         pass
 
     @abstractmethod
-    def predict_suffix(self, log):
-        pass
-
-    @abstractmethod
     def evaluate(self, log):
         pass

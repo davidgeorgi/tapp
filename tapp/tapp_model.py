@@ -111,9 +111,6 @@ class TappModel(PredictionModel):
         prediction = self.model.predict(x)
         return np.maximum(prediction[3].flatten() * self.log_encoder.time_scaling_divisor[0], 0)
 
-    def predict_suffix(self, log):
-        return
-
     def predict(self, log):
         x = self.log_encoder.transform(log, for_training=False)
         prediction = self.model.predict(x)

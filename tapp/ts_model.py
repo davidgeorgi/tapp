@@ -84,8 +84,8 @@ class TSModel(PredictionModel):
         self.test = self.next_time_anno
 
         # Compute global distributions
-        self.remaining_time_global = np.mean([time for state in self.states if state in self.remaining_time_anno for time in self.remaining_time_anno[state]])
-        self.next_time_global = np.mean([time for state in self.states if state in self.next_time_anno for time in self.next_time_anno[state]])
+        self.remaining_time_global = np.median([time for state in self.states if state in self.remaining_time_anno for time in self.remaining_time_anno[state]])
+        self.next_time_global = np.median([time for state in self.states if state in self.next_time_anno for time in self.next_time_anno[state]])
         next_activity_list = [self.activities.index(event[attribute]) for case in log for event in case if event is not case[0]] + [len(self.activities) for _ in log]
         self.next_activity_global = np.array([next_activity_list.count(activity) for activity in range(len(self.activities) + 1)])
         outcome_list = [self.activities.index(case[-1][attribute]) for case in log]
@@ -94,8 +94,8 @@ class TSModel(PredictionModel):
         # Compute annotations
         for state in self.states:
             if state in self.remaining_time_anno:
-                self.remaining_time_anno[state] = np.mean(self.remaining_time_anno[state])
-                self.next_time_anno[state] = np.mean(self.next_time_anno[state])
+                self.remaining_time_anno[state] = np.median(self.remaining_time_anno[state])
+                self.next_time_anno[state] = np.median(self.next_time_anno[state])
                 self.next_activity_anno[state] = np.array([(self.next_activity_anno[state].count(activity) / len(self.next_activity_anno[state])) for activity in range(len(self.activities) + 1)])
                 self.outcome_anno[state] = np.array([(self.outcome_anno[state].count(activity) / len(self.outcome_anno[state])) for activity in range(len(self.activities))])
 
@@ -180,7 +180,7 @@ class TSModel(PredictionModel):
     def evaluate(self, log, path, num_prefixes=8):
         # Generate raw predictions
         raw = self._evaluate_raw(log)
-        # raw.to_csv("raw.csv", encoding="utf-8", sep=",", index=False)
+        raw.to_csv("ts_" + self.abstraction + "_" + str(self.horizon) + path.replace("/",""), encoding="utf-8", sep=",", index=False)
         # Compute metrics
         next_activity_acc = len(raw[(raw["pred-next-activity"] == raw["true-next-activity"]) & (raw["prefix-length"] >= 1)]) / np.max([len(raw[raw["prefix-length"] >= 1]), 1])
         next_time_mae = mean_absolute_error(raw[raw["prefix-length"] >= 1]["true-next-time"].astype(float).to_numpy(), raw[raw["prefix-length"] >= 1]["pred-next-time"].astype(float).to_numpy()).numpy()

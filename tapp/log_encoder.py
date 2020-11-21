@@ -17,7 +17,7 @@ class Encoder(ABC):
 
 
 class LogEncoder(Encoder):
-    
+
     def __init__(self, text_encoder=None, advanced_time_attributes=True):
         self.text_encoder = text_encoder
         self.activities = []
@@ -150,9 +150,9 @@ class LogEncoder(Encoder):
                         # Case 2: Set next activity as target
                         y_next_act[trace_dim_index][self.activities.index(case[prefix_length]["concept:name"])] = 1
                         y_next_time[trace_dim_index] = (case[prefix_length]["time:timestamp"].timestamp() - case[prefix_length - 1]["time:timestamp"].timestamp()) / self.time_scaling_divisor[1]
-                    # Set final activity and case cycle time as target
+                    # Set final activity and remaining time as target
                     y_final_act[trace_dim_index][self.activities.index(case[-1]["concept:name"])] = 1
-                    y_final_time[trace_dim_index] = (case[-1]["time:timestamp"].timestamp() - case_start_time) / self.time_scaling_divisor[0]
+                    y_final_time[trace_dim_index] = (case[-1]["time:timestamp"].timestamp() - case[prefix_length - 1]["time:timestamp"].timestamp()) / self.time_scaling_divisor[0]
 
                 # Increase index for next (prefix-)trace
                 trace_dim_index += 1

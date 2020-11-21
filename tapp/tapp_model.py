@@ -109,13 +109,15 @@ class TappModel(PredictionModel):
     def predict_cycle_time(self, log):
         x = self.log_encoder.transform(log, for_training=False)
         prediction = self.model.predict(x)
-        return np.maximum(prediction[3].flatten() * self.log_encoder.time_scaling_divisor[0], 0)
+        passed_time = np.array([case[-1]["time:timestamp"].timestamp() - case[0]["time:timestamp"].timestamp() for case in log])
+        return np.add(passed_time, np.maximum(prediction[3].flatten() * self.log_encoder.time_scaling_divisor[0], 0))
 
     def predict(self, log):
         x = self.log_encoder.transform(log, for_training=False)
         prediction = self.model.predict(x)
         prediction[2] = np.maximum(prediction[2].flatten() * self.log_encoder.time_scaling_divisor[1], 0)
-        prediction[3] = np.maximum(prediction[3].flatten() * self.log_encoder.time_scaling_divisor[0], 0)
+        passed_time = np.array([case[-1]["time:timestamp"].timestamp() - case[0]["time:timestamp"].timestamp() for case in log])
+        prediction[3] = np.add(passed_time, np.maximum(prediction[3].flatten() * self.log_encoder.time_scaling_divisor[0], 0))
         return prediction
 
     def _evaluate_raw(self, log):
@@ -151,6 +153,7 @@ class TappModel(PredictionModel):
     def evaluate(self, log, path, num_prefixes=8):
         # Generate raw predictions
         raw = self._evaluate_raw(log)
+        raw.to_csv("tapp_" + (self.log_encoder.text_encoder.name if self.log_encoder.text_encoder is not None else "-") + "_" + (str(self.log_encoder.text_encoder.encoding_length) if self.log_encoder.text_encoder is not None else "0") + path.replace("/",""), encoding="utf-8", sep=",", index=False)
         # Compute metrics
         next_activity_acc = len(raw[(raw["pred-next-activity"] == raw["true-next-activity"]) & (raw["prefix-length"] >= 1)]) / np.max([len(raw[raw["prefix-length"] >= 1]), 1])
         next_time_mae = mean_absolute_error(raw[raw["prefix-length"] >= 1]["true-next-time"].astype(float).to_numpy(), raw[raw["prefix-length"] >= 1]["pred-next-time"].astype(float).to_numpy()).numpy()
